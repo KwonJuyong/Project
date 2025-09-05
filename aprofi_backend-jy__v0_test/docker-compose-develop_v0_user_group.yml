@@ -1,0 +1,72 @@
+services:
+  db:
+    image: pgvector/pgvector:0.8.0-pg16
+    container_name: aprofi_postgres_server_ver_jy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER_JY_test}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_JY_test}
+      POSTGRES_DB: ${POSTGRES_DB_JY_test}
+      PGPORT: ${PGPORT_JY_test}
+    volumes:
+      - aprofi_postgres_data_jy:/var/lib/postgresql/data
+    networks:
+      - aprofi_network_jy
+    expose:
+      - "${PGPORT_JY_test}"
+    ports:
+      - "${PGPORT_JY_test}:${PGPORT_JY_test}"   # host 5447 -> container 5447
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER_JY_test} -d ${POSTGRES_DB_JY_test} -p ${PGPORT_JY_test}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: aprofi_pgadmin_ver_jy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL_JY}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD_JY}
+    volumes:
+      - aprofi_pgadmin_data_jy:/var/lib/pgadmin
+    networks:
+      - aprofi_network_jy
+    ports:
+      - "8097:80"
+    depends_on:
+      - db
+
+  api:
+    build: .
+    container_name: aprofi_fastapi_ver_jy
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DATABASE_URL: ${DATABASE_URL_VER_JY}
+      SECRET_KEY: ${SECRET_KEY_VER_JY}
+      ALGORITHM: ${ALGORITHM_VER_JY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES_VER_JY}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS_VER_JY}
+    networks:
+      - aprofi_network_jy
+    ports:
+      - "8003:8000"  # host 8003 -> container 8000
+
+networks:
+  aprofi_network_jy:
+    driver: bridge
+
+volumes:
+  aprofi_postgres_data_jy:
+  aprofi_pgadmin_data_jy:

@@ -1,0 +1,12 @@
+[
+    {
+        "code": "PROB001",
+        "description": "두 숫자를 더하는 함수 구현",
+        "example": "입력: 1, 2 / 출력: 3"
+    },
+    {
+        "code": "PROB002",
+        "description": "문자열을 뒤집는 함수 구현",
+        "example": "입력: 'hello' / 출력: 'olleh'"
+    }
+]

@@ -1,0 +1,99 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg16
+    container_name: aprofi_postgres_server_jy_v0_test
+    restart: always
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Seoul
+      POSTGRES_USER: ${POSTGRES_USER_JY_V0_TEST}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_JY_V0_TEST}
+      POSTGRES_DB: ${POSTGRES_DB_JY_V0_TEST}
+      # ❌ PGPORT 제거 (내부 포트는 항상 5432로 둔다)
+    volumes:
+      - aprofi_postgres_data_jy_v0_test:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - aprofi_network_jy_v0_test
+    ports:
+      - "${PGPORT_JY_V0_TEST}:5432"  # ✅ 외부=5448, 내부=5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER_JY_V0_TEST} -d ${POSTGRES_DB_JY_V0_TEST}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: aprofi_redis_jy_v0_test
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - aprofi_redis_data_jy_v0_test:/data
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - aprofi_network_jy_v0_test
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -p 6379 ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: aprofi_pgadmin_jy_v0_test
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - aprofi_pgadmin_data_jy_v0_test:/var/lib/pgadmin
+    networks:
+      - aprofi_network_jy_v0_test
+    ports:
+      - "8097:80"
+    depends_on:
+      - postgres
+
+  fastapi:
+    build: .
+    container_name: aprofi_fastapi_jy_v0_test
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY_JY_V0_TEST}
+      ALGORITHM: ${ALGORITHM_JY_V0_TEST}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES_JY_V0_TEST}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS_JY_V0_TEST}
+      REDIS_URL: ${REDIS_URL}
+    networks:
+      - aprofi_network_jy_v0_test
+    ports:
+      - "8003:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+networks:
+  aprofi_network_jy_v0_test:
+    driver: bridge
+
+volumes:
+  aprofi_postgres_data_jy_v0_test:
+  aprofi_pgadmin_data_jy_v0_test:
+  aprofi_redis_data_jy_v0_test:
